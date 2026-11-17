@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#24485f">
+<title>Painel de pedidos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --aco:#24485f;        /* azul-aço, faixa do portal */
+    --aco-claro:#dfe8ee;
+    --fundo:#eef2f4;
+    --papel:#ffffff;
+    --tinta:#1d2a33;
+    --cinza:#5f6f7a;
+    --linha:#d3dce2;
+    --atraso:#b8381f;
+    --bloq:#a8670c;
+    --ok:#2c7a4b;
+    --raio:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:"Barlow",system-ui,sans-serif;background:var(--fundo);color:var(--tinta);font-size:16px;line-height:1.45;
+       padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+  button,input,select{font:inherit;color:inherit}
+  button{cursor:pointer}
+  :focus-visible{outline:3px solid #6aa6cf;outline-offset:2px}
+  .num{font-family:"Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
+
+  /* faixa do robô */
+  .faixa{background:var(--aco);color:#fff;padding:14px 16px 16px}
+  .faixa-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .faixa h1{font-size:1.15rem;font-weight:600;margin:0;letter-spacing:.01em}
+  .estado-robo{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.95rem}
+  .luz{width:10px;height:10px;border-radius:50%;background:#7fd19b;box-shadow:0 0 0 3px rgba(127,209,155,.25)}
+  .luz.off{background:#f1a24a;box-shadow:0 0 0 3px rgba(241,162,74,.25)}
+  .proxima{font-family:"Barlow Condensed",sans-serif;font-size:1.9rem;font-weight:600;line-height:1.1;margin-top:6px}
+  .proxima small{display:block;font-family:"Barlow",sans-serif;font-size:.85rem;font-weight:400;opacity:.8}
+  .btn-faixa{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:7px 12px;font-size:.9rem}
+  .acoes-faixa{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .btn-rodar{background:#fff;color:var(--aco);border:0;border-radius:8px;padding:9px 14px;font-weight:600}
+
+  main{max-width:720px;margin:0 auto;padding:16px}
+  section[hidden]{display:none}
+  h2{font-size:1.25rem;margin:4px 0 4px;font-weight:600}
+  .ajuda{color:var(--cinza);font-size:.92rem;margin:0 0 14px}
+  .bloco{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);padding:14px;margin-bottom:14px}
+  .bloco h3{font-size:1rem;margin:0 0 10px;font-weight:600}
+
+  /* situação */
+  .cliente{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);margin-bottom:12px;overflow:hidden}
+  .cliente summary{list-style:none;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:2px 10px;cursor:pointer}
+  .cliente summary::-webkit-details-marker{display:none}
+  .cli-nome{font-weight:600;font-size:1.05rem}
+  .cli-cod{color:var(--cinza);font-size:.85rem}
+  .cli-num{grid-row:span 2;text-align:right;align-self:center}
+  .cli-num b{font-family:"Barlow Condensed",sans-serif;font-size:1.6rem;font-weight:600;display:block;line-height:1}
+  .cli-num span{font-size:.8rem;color:var(--cinza)}
+  .marcas{display:flex;gap:6px;flex-wrap:wrap;grid-column:1/-1;margin-top:6px}
+  .marca{font-size:.8rem;padding:2px 8px;border-radius:999px;border:1px solid}
+  .marca.atraso{color:var(--atraso);border-color:#e8b8ad;background:#fbefec}
+  .marca.bloq{color:var(--bloq);border-color:#ecd2a6;background:#fcf5e9}
+  .marca.ok{color:var(--ok);border-color:#b8dcc6;background:#eef7f1}
+  .pedidos{border-top:1px solid var(--linha)}
+  .ped{display:grid;grid-template-columns:auto 1fr auto;gap:2px 12px;padding:10px 14px;border-bottom:1px solid #edf1f3;font-size:.92rem}
+  .ped:last-child{border-bottom:0}
+  .ped .nr{font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:1.05rem}
+  .ped .st{font-weight:600}
+  .ped .dir{text-align:right}
+  .ped .sub{grid-column:2/-1;color:var(--cinza);font-size:.85rem}
+  .ped.atraso{border-left:4px solid var(--atraso)}
+  .ped.bloq{border-left:4px solid var(--bloq)}
+  .ped.dia{border-left:4px solid #b9c7d0}
+  .vazio{color:var(--cinza);padding:18px;text-align:center;background:var(--papel);border:1px dashed var(--linha);border-radius:var(--raio)}
+
+  /* listas de clientes */
+  .lista-cli{margin:0;padding:0;list-style:none}
+  .lista-cli li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #edf1f3}
+  .lista-cli li:last-child{border-bottom:0}
+  .lista-cli .info{flex:1;min-width:0}
+  .lista-cli .info b{display:block;font-weight:600}
+  .lista-cli .info span{color:var(--cinza);font-size:.88rem}
+  .mini{border:1px solid var(--linha);background:#f6f8f9;border-radius:7px;padding:6px 9px;font-size:.85rem}
+  .mini.perigo{color:var(--atraso);border-color:#e8b8ad;background:#fff}
+  .form-add{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+  .form-add .larga{grid-column:1/-1}
+  label.campo{display:flex;flex-direction:column;gap:4px;font-size:.88rem;color:var(--cinza)}
+  input[type=text],input[type=password],input[type=time],input[type=number],select{border:1px solid #b9c7d0;border-radius:8px;padding:9px 10px;background:#fff;width:100%;color:var(--tinta);font-size:1rem}
+  .btn{border:0;border-radius:8px;padding:10px 14px;font-weight:600;background:var(--aco);color:#fff}
+  .btn.sec{background:#fff;color:var(--aco);border:1px solid var(--aco)}
+  .msg-erro{color:var(--atraso);font-size:.9rem;min-height:1.2em;margin:6px 0 0}
+
+  /* agenda */
+  .dias{display:flex;gap:6px;flex-wrap:wrap}
+  .dia input{position:absolute;opacity:0;pointer-events:none}
+  .dia span{display:inline-block;min-width:46px;text-align:center;padding:8px 6px;border:1px solid #b9c7d0;border-radius:8px;background:#fff;font-weight:500}
+  .dia input:checked + span{background:var(--aco);border-color:var(--aco);color:#fff}
+  .dia input:focus-visible + span{outline:3px solid #6aa6cf;outline-offset:2px}
+  .horas{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .hora{display:flex;align-items:center;gap:6px;border:1px solid var(--linha);border-radius:8px;padding:6px 6px 6px 12px;background:#f6f8f9}
+  .hora b{font-family:"Barlow Condensed",sans-serif;font-size:1.25rem;font-weight:600}
+  .hora .primeiro{font-size:.75rem;color:var(--ok)}
+  .x{border:0;background:transparent;font-size:1.2rem;line-height:1;padding:2px 6px;color:var(--cinza)}
+  .linha-add{display:flex;gap:8px}
+  .linha-add input{max-width:150px}
+
+  /* avisos */
+  .opcao{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf1f3}
+  .opcao:last-child{border-bottom:0}
+  .opcao input{width:22px;height:22px;margin-top:1px;accent-color:var(--aco);flex:none}
+  .opcao b{display:block;font-weight:600}
+  .opcao span{color:var(--cinza);font-size:.88rem}
+
+  /* histórico */
+  .exec{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:10px 0;border-bottom:1px solid #edf1f3}
+  .exec:last-child{border-bottom:0}
+  .exec .q{font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:1.05rem}
+  .exec .r{color:var(--cinza);font-size:.88rem;grid-column:2}
+  .exec.falha .q{color:var(--atraso)}
+
+  /* barra de salvar e abas */
+  .salvar{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));display:none;justify-content:center;padding:0 12px 10px;pointer-events:none}
+  .salvar.on{display:flex}
+  .salvar div{pointer-events:auto;background:var(--tinta);color:#fff;border-radius:12px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 18px rgba(29,42,51,.25);max-width:560px;width:100%}
+  .salvar span{flex:1;font-size:.95rem}
+  .salvar .btn{background:#7fd19b;color:#123221}
+  .salvar .desfazer{background:transparent;border:0;color:#cfd8de;text-decoration:underline}
+  nav.abas{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--linha);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+  nav.abas button{border:0;background:transparent;padding:10px 2px 12px;font-size:.82rem;color:var(--cinza);display:flex;flex-direction:column;align-items:center;gap:3px}
+  nav.abas svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+  nav.abas button[aria-current=page]{color:var(--aco);font-weight:600}
+  .aviso-topo{background:#fcf5e9;border:1px solid #ecd2a6;color:#6b4508;border-radius:var(--raio);padding:12px 14px;margin-bottom:14px;font-size:.95rem}
+  .toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 16px;border-radius:10px;z-index:20;font-size:.95rem;max-width:92vw;display:none}
+  .toast.on{display:block}
+  .carregando{color:var(--cinza);padding:20px 0;text-align:center}
+
+  /* tela de conexão */
+  .conectar{max-width:520px;margin:0 auto;padding:24px 16px}
+  .conectar ol{padding-left:20px;color:var(--cinza);font-size:.92rem}
+  .conectar li{margin-bottom:6px}
+  .check{display:flex;gap:8px;align-items:center;font-size:.92rem;margin:10px 0 14px}
+  @media (prefers-reduced-motion:no-preference){.ped,.cliente{transition:background .15s}}
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- ============ CONECTAR ============ -->
+<div id="telaConectar" class="conectar" hidden>
+  <h2>Conectar ao robô de pedidos</h2>
+  <p class="ajuda">Esta tela lê e grava a configuração do robô no seu GitHub. Ela precisa de uma chave de acesso, criada uma vez só.</p>
+  <div class="bloco">
+    <label class="campo">Repositório do robô
+      <input id="cRepo" type="text" value="talleslr/robo-pedidos" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </label>
+    <div style="height:10px"></div>
+    <label class="campo">Chave de acesso do GitHub (começa com github_pat_)
+      <input id="cToken" type="password" autocomplete="off" spellcheck="false">
+    </label>
+    <label class="check"><input id="cLembrar" type="checkbox" checked> Lembrar neste aparelho</label>
+    <button class="btn" id="btnConectar">Conectar</button>
+    <p class="msg-erro" id="erroConectar"></p>
+  </div>
+  <p class="ajuda">A chave fica guardada só neste aparelho. Ela dá acesso apenas ao repositório do robô. Se perder o celular, apague a chave no GitHub (Settings → Developer settings → Personal access tokens).</p>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" hidden>
+  <header class="faixa">
+    <div class="faixa-top">
+      <h1>Robô de pedidos</h1>
+      <button class="btn-faixa" id="btnAtualizar" aria-label="Atualizar dados">Atualizar</button>
+    </div>
+    <div class="estado-robo"><span class="luz" id="luz"></span><span id="txtEstado">Carregando…</span></div>
+    <div class="proxima" id="proxima">—<small>próxima checagem</small></div>
+    <div class="acoes-faixa">
+      <button class="btn-rodar" id="btnRodar">Rodar agora</button>
+      <button class="btn-faixa" id="btnPausa">Pausar robô</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- SITUAÇÃO -->
+    <section id="aba-situacao">
+      <h2>Situação dos pedidos</h2>
+      <p class="ajuda" id="ultimaLeitura">—</p>
+      <div id="situacao"><p class="carregando">Carregando…</p></div>
+    </section>
+
+    <!-- CLIENTES -->
+    <section id="aba-clientes" hidden>
+      <h2>Clientes acompanhados</h2>
+      <p class="ajuda">Prioridade alta: conferidos em todos os horários. Prioridade baixa: só no primeiro horário dos dias escolhidos na Agenda.</p>
+      <div class="bloco">
+        <h3>Adicionar cliente</h3>
+        <form class="form-add" id="formAdd" novalidate>
+          <label class="campo">Código
+            <input id="addCod" type="text" inputmode="numeric" placeholder="241068" autocomplete="off">
+          </label>
+          <label class="campo">Nome (para os avisos)
+            <input id="addNome" type="text" placeholder="Esposende" autocomplete="off">
+          </label>
+          <label class="campo larga">Prioridade
+            <select id="addPri"><option value="alta">Alta</option><option value="baixa">Baixa</option></select>
+          </label>
+          <button class="btn larga" type="submit">Adicionar</button>
+        </form>
+        <p class="msg-erro" id="erroAdd"></p>
+      </div>
+      <div class="bloco"><h3 id="tAlta">Prioridade alta</h3><ul class="lista-cli" id="listaAlta"></ul></div>
+      <div class="bloco"><h3 id="tBaixa">Prioridade baixa</h3><ul class="lista-cli" id="listaBaixa"></ul></div>
+    </section>
+
+    <!-- AGENDA -->
+    <section id="aba-agenda" hidden>
+      <h2>Agenda das checagens</h2>
+      <p class="ajuda">O primeiro horário de cada dia manda o resumo completo. Nos outros, chega mensagem só se algo mudar.</p>
+      <div class="bloco">
+        <h3>Dias da semana</h3>
+        <div class="dias" id="diasSemana"></div>
+      </div>
+      <div class="bloco">
+        <h3>Horários</h3>
+        <p class="ajuda">Toque para ligar ou desligar. O primeiro horário ligado manda o resumo completo.</p>
+        <div class="dias" id="horas"></div>
+        <p class="ajuda" id="resumoHoras" style="margin:10px 0 0"></p>
+      </div>
+      <div class="bloco">
+        <h3>Clientes de prioridade baixa</h3>
+        <p class="ajuda">Dias em que eles entram na checagem da manhã.</p>
+        <div class="dias" id="diasBaixa"></div>
+        <label class="opcao" style="border:0;padding-bottom:0">
+          <input type="checkbox" id="regraBaixa">
+          <div><b>Pular o resto da semana quem não tiver pedido em andamento</b>
+          <span>No primeiro dia da semana, o cliente sem pedido aberto só volta a ser olhado na semana seguinte.</span></div>
+        </label>
+      </div>
+      <div class="bloco">
+        <h3>Período da consulta</h3>
+        <label class="campo">Data de entrada dos últimos (meses)
+          <input type="number" id="meses" min="1" max="12" style="max-width:120px">
+        </label>
+      </div>
+    </section>
+
+    <!-- AVISOS -->
+    <section id="aba-avisos" hidden>
+      <h2>O que chega no Telegram</h2>
+      <p class="ajuda">Desligue os avisos que você não quer receber. O robô continua acompanhando tudo; só deixa de mandar a mensagem.</p>
+      <div class="bloco" id="listaAvisos"></div>
+    </section>
+
+    <!-- HISTÓRICO -->
+    <section id="aba-historico" hidden>
+      <h2>Últimas checagens</h2>
+      <p class="ajuda">As consultas feitas no portal, da mais recente para a mais antiga.</p>
+      <div class="bloco" id="historico"></div>
+    </section>
+  </main>
+
+  <div class="salvar" id="barraSalvar" role="region" aria-label="Alterações não salvas">
+    <div><span id="txtSalvar">Alterações não salvas</span>
+      <button class="desfazer" id="btnDesfazer">Desfazer</button>
+      <button class="btn" id="btnSalvar">Salvar</button></div>
+  </div>
+
+  <nav class="abas" aria-label="Seções">
+    <button data-aba="situacao" aria-current="page"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Situação</button>
+    <button data-aba="clientes"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.8c1.5.8 2.6 2.6 3 5.2"/></svg>Clientes</button>
+    <button data-aba="agenda"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Agenda</button>
+    <button data-aba="avisos"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>Avisos</button>
+    <button data-aba="historico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Histórico</button>
+  </nav>
+</div>
+
+<script>
+"use strict";
+const API = "https://api.github.com";
+const WF = "checagem.yml";
+const DIAS = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
+const AVISOS = [
+  ["faturado","Pedido faturado","Com número da NF e se foi antecipado, no prazo ou com atraso."],
+  ["bloqueio","Pedido bloqueado","Bloqueio de crédito, comercial ou em análise."],
+  ["desbloqueio","Pedido desbloqueado","Quando sai do bloqueio e volta a andar."],
+  ["atrasou","Pedido entrou em atraso","Passou do fim da previsão inicial e ainda não faturou."],
+  ["cancelado","Pedido cancelado",""],
+  ["parcial","Parcialmente faturado",""],
+  ["status","Mudança de etapa","Por exemplo A3 → A4 → A5."],
+  ["previsao","Previsão de faturamento alterada","O robô mantém a previsão inicial como referência."],
+  ["novo","Pedido novo","Pedido digitado que apareceu na consulta."],
+  ["sumiu","Pedido saiu da consulta","Pedido aberto que deixou de aparecer no período pesquisado."],
+  ["listar_atrasados","Listar os números dos pedidos atrasados","No resumo da manhã, mostra cada pedido atrasado com a quantidade de pares."]
+];
+const LETRAS_BLOQ = ["B","P","T","R"];
+const SLOTS = ["07:30","08:30","09:30","10:30","11:30","12:30","13:30","14:30","15:30","16:30","17:30","18:30"];
+const HORAS_PADRAO = ["07:30","09:30","11:30","13:30","16:30","18:30"];
+
+let conf = null;          // {repo, token, lembrar}
+let branch = "main";
+let cfgOriginal = null;   // configuração como está no GitHub
+let cfg = null;           // configuração sendo editada
+let cfgSha = null;
+let estado = null;
+let workflowAtivo = true;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function toast(t, ms=3200){ const el=$("toast"); el.textContent=t; el.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("on"),ms); }
+
+/* ---------- armazenamento local da chave ---------- */
+function lerConf(){ try{ return JSON.parse(localStorage.getItem("painel_conf")||sessionStorage.getItem("painel_conf")||"null"); }catch(e){ return null; } }
+function guardarConf(c){
+  try{ localStorage.removeItem("painel_conf"); sessionStorage.removeItem("painel_conf"); }catch(e){}
+  try{ (c.lembrar?localStorage:sessionStorage).setItem("painel_conf", JSON.stringify(c)); }catch(e){}
+}
+function esquecerConf(){ try{ localStorage.removeItem("painel_conf"); sessionStorage.removeItem("painel_conf"); }catch(e){} }
+
+/* ---------- GitHub ---------- */
+async function gh(path, opts={}){
+  const r = await fetch(API + path, {
+    ...opts, cache:"no-store",
+    headers:{ "Authorization":"Bearer "+conf.token, "Accept": opts.accept || "application/vnd.github+json",
+              "X-GitHub-Api-Version":"2022-11-28", ...(opts.body?{"Content-Type":"application/json"}:{}) }
+  });
+  if(!r.ok){
+    let msg = ""; try{ msg = (await r.json()).message || ""; }catch(e){}
+    const err = new Error(msg || ("Erro " + r.status)); err.status = r.status; throw err;
+  }
+  return r;
+}
+const b64utf8 = s => { const b = new TextEncoder().encode(s); let bin=""; b.forEach(x=>bin+=String.fromCharCode(x)); return btoa(bin); };
+async function lerArquivo(caminho){
+  const r = await gh(`/repos/${conf.repo}/contents/${caminho}?ref=${encodeURIComponent(branch)}`, {accept:"application/vnd.github.raw+json"});
+  return r.text();
+}
+async function shaArquivo(caminho){
+  const r = await gh(`/repos/${conf.repo}/contents/${caminho}?ref=${encodeURIComponent(branch)}`);
+  return (await r.json()).sha;
+}
+
+/* ---------- carregar ---------- */
+async function carregarTudo(){
+  const repo = await (await gh(`/repos/${conf.repo}`)).json();
+  branch = repo.default_branch || "main";
+  const [txtCfg, sha] = await Promise.all([lerArquivo("clientes.json"), shaArquivo("clientes.json")]);
+  cfgOriginal = normalizar(JSON.parse(txtCfg));
+  cfg = clone(cfgOriginal); cfgSha = sha;
+  const naGrade = cfg.agenda.horarios.filter(h=>SLOTS.includes(h));
+  if(naGrade.length !== cfg.agenda.horarios.length){
+    cfg.agenda.horarios = [...HORAS_PADRAO];
+    setTimeout(()=>toast("Os horários foram ajustados para a nova agenda. Toque em Salvar para aplicar.", 6000), 400);
+  }
+  try{ estado = JSON.parse(await lerArquivo("estado/estado.json")); }catch(e){ estado = null; }
+  try{ workflowAtivo = (await (await gh(`/repos/${conf.repo}/actions/workflows/${WF}`)).json()).state === "active"; }catch(e){}
+  desenharTudo();
+}
+const clone = o => JSON.parse(JSON.stringify(o));
+function normalizar(c){
+  c.alta = c.alta || []; c.baixa = c.baixa || [];
+  c.agenda = Object.assign({dias_semana:[0,1,2,3,4], horarios:[...HORAS_PADRAO], baixa_dias:[0,2,4], baixa_regra:true}, c.agenda||{});
+  const av = {}; AVISOS.forEach(([k])=>av[k]=true); c.avisos = Object.assign(av, c.avisos||{});
+  c.meses_data_entrada = c.meses_data_entrada || 4;
+  return c;
+}
+
+/* ---------- desenhar ---------- */
+function desenharTudo(){ desenharFaixa(); desenharSituacao(); desenharClientes(); desenharAgenda(); desenharAvisos(); desenharHistorico(); marcarSujo(); }
+
+function minutos(h){ const m=/^(\d{1,2}):(\d{2})$/.exec(h||""); return m? (+m[1])*60 + (+m[2]) : null; }
+function agoraLocal(){ // horário de Recife/Fortaleza (UTC-3, sem horário de verão)
+  const d = new Date(Date.now() - 3*3600*1000);
+  return { dia:(d.getUTCDay()+6)%7, min:d.getUTCHours()*60+d.getUTCMinutes() };
+}
+function proximaChecagem(c){
+  const hs = [...c.agenda.horarios].sort((a,b)=>minutos(a)-minutos(b)); if(!hs.length || !c.agenda.dias_semana.length) return null;
+  const a = agoraLocal();
+  for(let k=0;k<8;k++){
+    const dia = (a.dia + k) % 7; if(!c.agenda.dias_semana.includes(dia)) continue;
+    for(const h of hs){ if(k>0 || minutos(h) > a.min) return {k, dia, h}; }
+  }
+  return null;
+}
+function desenharFaixa(){
+  $("luz").classList.toggle("off", !workflowAtivo);
+  const ult = estado && estado.ultima_execucao ? new Date(estado.ultima_execucao) : null;
+  $("txtEstado").textContent = workflowAtivo
+    ? (ult ? "Ligado · última checagem " + fmtData(ult) : "Ligado")
+    : "Pausado · não está consultando o portal";
+  $("btnPausa").textContent = workflowAtivo ? "Pausar robô" : "Religar robô";
+  const p = workflowAtivo ? proximaChecagem(cfgOriginal) : null;
+  const quando = p ? (p.k===0 ? "Hoje" : p.k===1 ? "Amanhã" : DIAS[p.dia]) + " às " + p.h : "—";
+  $("proxima").innerHTML = esc(quando) + "<small>" + (workflowAtivo ? "próxima checagem" : "religue para voltar a receber avisos") + "</small>";
+}
+function fmtData(d){
+  const dd = String(d.getDate()).padStart(2,"0"), mm = String(d.getMonth()+1).padStart(2,"0");
+  return `${dd}/${mm} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+function hojeISO(){ const d=new Date(Date.now()-3*3600*1000); return d.toISOString().slice(0,10); }
+function diasEntre(a,b){ return Math.round((Date.parse(b)-Date.parse(a))/86400000); }
+const br = iso => iso ? iso.slice(8,10)+"/"+iso.slice(5,7) : "?";
+const pares = n => Number(n||0).toLocaleString("pt-BR");
+const ETAPA = {A3:"entrando em produção",A4:"em produção",A5:"pronto"};
+function letra(st){ const m=/([A-Z]{1,2})\d*$/.exec(st||""); return m?m[1]:"?"; }
+
+function desenharSituacao(){
+  const box = $("situacao");
+  if(!estado || !estado.pedidos){ box.innerHTML = '<div class="vazio">Ainda não há leitura do portal. Toque em <b>Rodar agora</b> para fazer a primeira.</div>'; $("ultimaLeitura").textContent=""; return; }
+  $("ultimaLeitura").textContent = estado.ultima_execucao ? "Leitura de " + fmtData(new Date(estado.ultima_execucao)) + ". Mostra só os pedidos em aberto." : "";
+  const hoje = hojeISO();
+  const nomes = {}; [...cfgOriginal.alta, ...cfgOriginal.baixa].forEach(c=>nomes[c.codigo]=c.nome);
+  const ordem = [...cfgOriginal.alta, ...cfgOriginal.baixa].map(c=>c.codigo);
+  const por = {};
+  for(const [nr,p] of Object.entries(estado.pedidos)){
+    const L = letra(p.status);
+    if(L==="F" || L==="C" || p.status==="SUMIU") continue;
+    (por[p.cliente_cod] ||= []).push({nr, ...p, L});
+  }
+  const cods = Object.keys(por).sort((a,b)=>(ordem.indexOf(a)+1||99)-(ordem.indexOf(b)+1||99));
+  if(!cods.length){ box.innerHTML = '<div class="vazio">Nenhum pedido em aberto nos clientes acompanhados.</div>'; return; }
+  box.innerHTML = cods.map(cod=>{
+    const ps = por[cod].map(p=>{
+      const atr = p.prev_fim && hoje > p.prev_fim ? diasEntre(p.prev_fim, hoje) : 0;
+      const bloq = LETRAS_BLOQ.includes(p.L);
+      return {...p, atr, bloq, tipo: bloq ? "bloq" : atr>0 ? "atraso" : "dia"};
+    }).sort((a,b)=> (a.tipo==="bloq"?0:a.tipo==="atraso"?1:2)-(b.tipo==="bloq"?0:b.tipo==="atraso"?1:2) || b.atr-a.atr || a.nr.localeCompare(b.nr));
+    const nAtr = ps.filter(p=>p.tipo==="atraso").length, nBloq = ps.filter(p=>p.tipo==="bloq").length, nDia = ps.length-nAtr-nBloq;
+    const totPares = ps.reduce((s,p)=>s+Number(p.pares||0),0);
+    const marcas = [nAtr?`<span class="marca atraso">${nAtr} atrasado${nAtr>1?"s":""}</span>`:"", nBloq?`<span class="marca bloq">${nBloq} bloqueado${nBloq>1?"s":""}</span>`:"", nDia?`<span class="marca ok">${nDia} no prazo</span>`:""].join("");
+    const linhas = ps.map(p=>`<div class="ped ${p.tipo}"><span class="nr">${esc(p.nr)}</span><span class="st">${p.bloq ? esc(p.status_texto||p.status) : esc(p.status)+(ETAPA[p.status]?" · "+ETAPA[p.status]:"")}</span><span class="dir num">${pares(p.pares)} pr</span>
+      <span class="sub">${p.prev_ini?`Previsão ${br(p.prev_ini)} a ${br(p.prev_fim)}`:esc(p.prev_atual||"")}${p.atr>0?` · <b style="color:var(--atraso)">${p.atr} dia${p.atr>1?"s":""} de atraso</b>`:""}</span></div>`).join("");
+    return `<details class="cliente"${cods.length<=2?" open":""}><summary><span class="cli-nome">${esc(nomes[cod]||cod)}</span><span class="cli-num"><b>${ps.length}</b><span>em aberto</span></span>
+      <span class="cli-cod">Código ${esc(cod)} · ${pares(totPares)} pares</span><div class="marcas">${marcas}</div></summary><div class="pedidos">${linhas}</div></details>`;
+  }).join("");
+}
+
+function itemCliente(c, pri){
+  const outra = pri==="alta" ? "baixa" : "alta";
+  return `<li><div class="info"><b>${esc(c.nome)}</b><span>Código ${esc(c.codigo)}</span></div>
+    <button class="mini" data-mover="${esc(c.codigo)}" data-para="${outra}">Mover para ${outra}</button>
+    <button class="mini perigo" data-remover="${esc(c.codigo)}" aria-label="Remover ${esc(c.nome)}">Remover</button></li>`;
+}
+function desenharClientes(){
+  $("tAlta").textContent = `Prioridade alta (${cfg.alta.length})`;
+  $("tBaixa").textContent = `Prioridade baixa (${cfg.baixa.length})`;
+  $("listaAlta").innerHTML = cfg.alta.map(c=>itemCliente(c,"alta")).join("") || '<li><span class="ajuda" style="margin:0">Nenhum cliente.</span></li>';
+  $("listaBaixa").innerHTML = cfg.baixa.map(c=>itemCliente(c,"baixa")).join("") || '<li><span class="ajuda" style="margin:0">Nenhum cliente.</span></li>';
+}
+function desenharDias(el, lista, chave){
+  el.innerHTML = DIAS.map((d,i)=>`<label class="dia"><input type="checkbox" data-${chave}="${i}" ${lista.includes(i)?"checked":""}><span>${d}</span></label>`).join("");
+}
+function desenharAgenda(){
+  desenharDias($("diasSemana"), cfg.agenda.dias_semana, "dia");
+  desenharDias($("diasBaixa"), cfg.agenda.baixa_dias, "baixa");
+  $("horas").innerHTML = SLOTS.map(h=>`<label class="dia"><input type="checkbox" data-slot="${h}" ${cfg.agenda.horarios.includes(h)?"checked":""}><span class="num" style="min-width:64px;font-size:1.1rem">${h}</span></label>`).join("");
+  const hs = [...cfg.agenda.horarios].sort((a,b)=>minutos(a)-minutos(b));
+  $("resumoHoras").textContent = hs.length ? `${hs.length} checagens por dia. Resumo completo às ${hs[0]}.` : "Nenhum horário ligado: o robô não vai consultar o portal.";
+  $("regraBaixa").checked = !!cfg.agenda.baixa_regra;
+  $("meses").value = cfg.meses_data_entrada;
+}
+function desenharAvisos(){
+  $("listaAvisos").innerHTML = AVISOS.map(([k,t,d])=>`<label class="opcao"><input type="checkbox" data-aviso="${k}" ${cfg.avisos[k]!==false?"checked":""}><div><b>${t}</b>${d?`<span>${d}</span>`:""}</div></label>`).join("");
+}
+function desenharHistorico(){
+  const ex = (estado && estado.execucoes) || [];
+  $("historico").innerHTML = ex.length ? ex.map(e=>`<div class="exec ${e.ok?"":"falha"}"><span class="q">${fmtData(new Date(e.quando))}</span><span>${e.modo==="manha"?"Resumo completo":"Só mudanças"} · ${e.horario==="manual"?"rodada manual":"agenda "+esc(e.horario)}${e.ok?"":" · <b>com problema</b>"}</span><span class="r">${esc(e.resumo)}</span></div>`).join("")
+    : '<p class="ajuda" style="margin:0">O histórico aparece a partir da próxima checagem.</p>';
+}
+
+/* ---------- edição ---------- */
+function marcarSujo(){
+  const sujo = JSON.stringify(cfg) !== JSON.stringify(cfgOriginal);
+  $("barraSalvar").classList.toggle("on", sujo);
+}
+function existe(cod){ return [...cfg.alta, ...cfg.baixa].some(c=>c.codigo===cod); }
+
+$("formAdd").addEventListener("submit", e=>{
+  e.preventDefault();
+  const cod = $("addCod").value.replace(/\D/g,""), nome = $("addNome").value.trim(), pri = $("addPri").value;
+  if(!cod){ $("erroAdd").textContent = "Informe o código do cliente, só números, sem o dígito depois do traço."; return; }
+  if(!nome){ $("erroAdd").textContent = "Informe um nome para o cliente aparecer nos avisos."; return; }
+  if(existe(cod)){ $("erroAdd").textContent = `O código ${cod} já está na lista.`; return; }
+  cfg[pri].push({codigo:cod, nome}); $("erroAdd").textContent = "";
+  $("addCod").value = ""; $("addNome").value = "";
+  desenharClientes(); marcarSujo(); toast(`${nome} adicionado. Toque em Salvar para valer.`);
+});
+document.addEventListener("click", e=>{
+  const t = e.target.closest("button"); if(!t) return;
+  if(t.dataset.remover){ const cod=t.dataset.remover; cfg.alta=cfg.alta.filter(c=>c.codigo!==cod); cfg.baixa=cfg.baixa.filter(c=>c.codigo!==cod); desenharClientes(); marcarSujo(); }
+  if(t.dataset.mover){ const cod=t.dataset.mover, para=t.dataset.para, de = para==="alta"?"baixa":"alta"; const c=cfg[de].find(x=>x.codigo===cod); cfg[de]=cfg[de].filter(x=>x.codigo!==cod); cfg[para].push(c); desenharClientes(); marcarSujo(); }
+  if(t.dataset.aba){ trocarAba(t.dataset.aba); }
+});
+document.addEventListener("change", e=>{
+  const t = e.target;
+  const alterna = (lista, v, on) => on ? [...new Set([...lista, v])].sort() : lista.filter(x=>x!==v);
+  if(t.dataset.dia!==undefined){ cfg.agenda.dias_semana = alterna(cfg.agenda.dias_semana, +t.dataset.dia, t.checked); marcarSujo(); }
+  if(t.dataset.baixa!==undefined){ cfg.agenda.baixa_dias = alterna(cfg.agenda.baixa_dias, +t.dataset.baixa, t.checked); marcarSujo(); }
+  if(t.dataset.aviso){ cfg.avisos[t.dataset.aviso] = t.checked; marcarSujo(); }
+  if(t.dataset.slot){ const h=t.dataset.slot; cfg.agenda.horarios = t.checked ? [...new Set([...cfg.agenda.horarios,h])] : cfg.agenda.horarios.filter(x=>x!==h);
+    cfg.agenda.horarios.sort((a,b)=>minutos(a)-minutos(b)); desenharAgenda(); marcarSujo(); }
+  if(t.id==="regraBaixa"){ cfg.agenda.baixa_regra = t.checked; marcarSujo(); }
+  if(t.id==="meses"){ const v = Math.min(12, Math.max(1, parseInt(t.value)||4)); cfg.meses_data_entrada = v; t.value=v; marcarSujo(); }
+});
+$("btnDesfazer").addEventListener("click", ()=>{ cfg = clone(cfgOriginal); desenharClientes(); desenharAgenda(); desenharAvisos(); marcarSujo(); });
+
+function resumoMudancas(){
+  const partes = [];
+  const ant = new Set([...cfgOriginal.alta,...cfgOriginal.baixa].map(c=>c.codigo)), nov = new Set([...cfg.alta,...cfg.baixa].map(c=>c.codigo));
+  const add = [...nov].filter(c=>!ant.has(c)), rem = [...ant].filter(c=>!nov.has(c));
+  if(add.length) partes.push("adiciona " + add.join(", ")); if(rem.length) partes.push("remove " + rem.join(", "));
+  if(JSON.stringify(cfg.agenda)!==JSON.stringify(cfgOriginal.agenda)) partes.push("agenda");
+  if(JSON.stringify(cfg.avisos)!==JSON.stringify(cfgOriginal.avisos)) partes.push("avisos");
+  return partes.join("; ") || "ajustes";
+}
+$("btnSalvar").addEventListener("click", async ()=>{
+  if(!cfg.agenda.horarios.length){ toast("Deixe pelo menos um horário na agenda."); trocarAba("agenda"); return; }
+  if(!cfg.agenda.dias_semana.length){ toast("Marque pelo menos um dia da semana."); trocarAba("agenda"); return; }
+  if(!cfg.alta.length && !cfg.baixa.length){ toast("Deixe pelo menos um cliente na lista."); trocarAba("clientes"); return; }
+  const b = $("btnSalvar"); b.disabled = true; b.textContent = "Salvando…";
+  try{
+    const sha = await shaArquivo("clientes.json");
+    const texto = JSON.stringify(cfg, null, 2) + "\n";
+    const r = await (await gh(`/repos/${conf.repo}/contents/clientes.json`, {method:"PUT", body: JSON.stringify({message:"Painel: " + resumoMudancas(), content:b64utf8(texto), sha, branch})})).json();
+    cfgSha = r.content && r.content.sha; cfgOriginal = clone(cfg);
+    marcarSujo(); desenharFaixa(); toast("Salvo. Vale a partir da próxima checagem.");
+  }catch(e){ toast(msgErro(e), 6000); }
+  finally{ b.disabled = false; b.textContent = "Salvar"; }
+});
+
+/* ---------- ações do robô ---------- */
+$("btnRodar").addEventListener("click", async ()=>{
+  const b = $("btnRodar"); b.disabled = true; b.textContent = "Pedindo…";
+  try{
+    if(!workflowAtivo){ toast("O robô está pausado. Religue antes de rodar."); return; }
+    await gh(`/repos/${conf.repo}/actions/workflows/${WF}/dispatches`, {method:"POST", body: JSON.stringify({ref:branch, inputs:{modo:"manha"}})});
+    toast("Checagem iniciada. O resumo chega no Telegram em 1 a 3 minutos.", 5000);
+  }catch(e){ toast(msgErro(e), 6000); }
+  finally{ b.disabled = false; b.textContent = "Rodar agora"; }
+});
+$("btnPausa").addEventListener("click", async ()=>{
+  const b = $("btnPausa"); b.disabled = true;
+  try{
+    await gh(`/repos/${conf.repo}/actions/workflows/${WF}/${workflowAtivo?"disable":"enable"}`, {method:"PUT"});
+    workflowAtivo = !workflowAtivo; desenharFaixa();
+    toast(workflowAtivo ? "Robô religado." : "Robô pausado. Ele não vai consultar o portal até você religar.", 4500);
+  }catch(e){ toast(msgErro(e), 6000); }
+  finally{ b.disabled = false; }
+});
+$("btnAtualizar").addEventListener("click", async ()=>{
+  if($("barraSalvar").classList.contains("on")){ toast("Salve ou desfaça as alterações antes de atualizar."); return; }
+  const b=$("btnAtualizar"); b.disabled=true; b.textContent="Atualizando…";
+  try{ await carregarTudo(); toast("Dados atualizados."); }catch(e){ toast(msgErro(e), 6000); }
+  finally{ b.disabled=false; b.textContent="Atualizar"; }
+});
+
+function msgErro(e){
+  if(e.status===401) return "A chave de acesso não é válida ou expirou. Crie uma nova no GitHub e conecte de novo.";
+  if(e.status===403) return "A chave não tem permissão para isso. Confira se ela tem Contents e Actions em Read and write.";
+  if(e.status===404) return "Repositório ou arquivo não encontrado. Confira o nome do repositório.";
+  if(e.status===409) return "A configuração mudou em outro lugar. Toque em Atualizar e refaça a alteração.";
+  if(e.status===422) return "O GitHub recusou o pedido: " + e.message;
+  return "Não foi possível falar com o GitHub (" + (e.message||"sem conexão") + ").";
+}
+
+/* ---------- abas ---------- */
+const NOMES_ABAS = ["situacao","clientes","agenda","avisos","historico"];
+function trocarAba(nome){
+  if(!NOMES_ABAS.includes(nome)) nome = "situacao";
+  NOMES_ABAS.forEach(n=>{ $("aba-"+n).hidden = n!==nome; });
+  document.querySelectorAll("nav.abas button").forEach(b=>{ if(b.dataset.aba===nome) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
+  if(location.hash !== "#"+nome) history.replaceState(null, "", "#"+nome);
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange", ()=>trocarAba(location.hash.slice(1)));
+
+/* ---------- conectar ---------- */
+$("btnConectar").addEventListener("click", async ()=>{
+  const repo = $("cRepo").value.trim().replace(/^https?:\/\/github\.com\//,"").replace(/\/$/,"");
+  const token = $("cToken").value.trim();
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){ $("erroConectar").textContent = "Escreva o repositório no formato usuario/nome, por exemplo talleslr/robo-pedidos."; return; }
+  if(!token){ $("erroConectar").textContent = "Cole a chave de acesso criada no GitHub."; return; }
+  conf = {repo, token, lembrar: $("cLembrar").checked};
+  const b = $("btnConectar"); b.disabled = true; b.textContent = "Conectando…";
+  try{ await carregarTudo(); guardarConf(conf); mostrarApp(); }
+  catch(e){ $("erroConectar").textContent = msgErro(e); conf = null; }
+  finally{ b.disabled = false; b.textContent = "Conectar"; }
+});
+function mostrarApp(){ $("telaConectar").hidden = true; $("app").hidden = false; trocarAba(location.hash.slice(1)); }
+function mostrarConectar(msg){ $("app").hidden = true; $("telaConectar").hidden = false; if(conf){ $("cRepo").value = conf.repo; } $("erroConectar").textContent = msg||""; }
+
+(async function iniciar(){
+  conf = lerConf();
+  if(!conf){ mostrarConectar(); return; }
+  $("app").hidden = false;
+  try{ await carregarTudo(); mostrarApp(); }
+  catch(e){ if(e.status===401){ esquecerConf(); } mostrarConectar(msgErro(e)); }
+})();
+</script>
+</body>
+</html>
